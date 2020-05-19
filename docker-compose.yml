@@ -1,15 +1,46 @@
-version: '2'
+version: "2"
 services:
   nginx-proxy:
     image: jwilder/nginx-proxy
     container_name: nginx-proxy
+    privileged: true
     ports:
-      - "80:80"
+      - 80:80
+      - 443:443
     volumes:
+      - ./docker-compose.d/certs:/etc/nginx/certs:ro
+      - ./docker-compose.d/htpasswd:/etc/nginx/htpasswd
+      - /etc/nginx/vhost.d
+      - /usr/share/nginx/html
       - /var/run/docker.sock:/tmp/docker.sock:ro
-
-  whoami:
-    image: jwilder/whoami
+    restart: always
+    logging:
+      options:
+        max-size: 5m
+        max-file: "10"
+  letsencrypt-nginx:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: letsencrypt-nginx
+    privileged: true
+    volumes:
+      - ./docker-compose.d/certs:/etc/nginx/certs:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    volumes_from:
+      - nginx-proxy
+    restart: always
+  mysql:
+    image: mysql:5.7
+    container_name: g-mysql
+    ports:
+      - "3307:3306"
     environment:
-      - VIRTUAL_HOST=whoami.local
-
+      MYSQL_ROOT_PASSWORD: mSEaknDr0zn80lIxGmLT5kXpi7CcmDGJW7o6EXHAOiS5FOppoEjrs7iCJbea3yBF
+    restart: always
+    logging:
+      options:
+        max-size: 5m
+        max-file: "10"
+networks:
+  default:
+    external:
+      name: common_link
